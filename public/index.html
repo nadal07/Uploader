@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloudflare Tunnel Large File Uploader & Streamer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <div class="logo-icon">⚡</div>
+        <div>
+          <h1>Cloudflare Tunnel Uploader</h1>
+          <p class="subtitle">Bypass 100MB/300MB Payload Limits with Resumable Chunking & Byte-Range Video Streaming</p>
+        </div>
+      </div>
+      <div class="status-badge" id="tunnelStatusBadge">
+        <span class="pulse-dot"></span>
+        <span class="status-text">Cloudflare Ready (10MB Chunks)</span>
+      </div>
+    </header>
+
+    <!-- Main Grid Layout -->
+    <main class="main-grid">
+      <!-- Left Column: Upload Controls & Active Upload -->
+      <section class="upload-section card">
+        <div class="card-header">
+          <h2>📤 Large File Uploader</h2>
+          <div class="config-toggle" id="configToggleBtn">⚙️ Settings</div>
+        </div>
+
+        <!-- Settings Drawer -->
+        <div class="settings-drawer hidden" id="settingsDrawer">
+          <div class="setting-row">
+            <label for="chunkSizeSelect">Chunk Size (Cloudflare Limit Bypass):</label>
+            <select id="chunkSizeSelect">
+              <option value="5242880">5 MB (Strict Networks)</option>
+              <option value="10485760" selected>10 MB (Recommended for Cloudflare)</option>
+              <option value="20971520">20 MB (Fast Connections)</option>
+              <option value="52428800">50 MB (High Speed)</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label for="concurrencySelect">Parallel Upload Workers:</label>
+            <select id="concurrencySelect">
+              <option value="1">1 Worker (Sequential)</option>
+              <option value="2" selected>2 Workers (Balanced)</option>
+              <option value="3">3 Workers (Fast)</option>
+              <option value="4">4 Workers (Maximum)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" class="file-input">
+          <div class="drop-zone-content">
+            <div class="cloud-upload-icon">☁️</div>
+            <h3>Drag & Drop Large Files Here</h3>
+            <p>Videos (MP4, MKV, MOV), ISOs, ZIPs up to multi-gigabytes</p>
+            <button type="button" class="btn btn-primary" id="browseBtn">Browse File</button>
+          </div>
+        </div>
+
+        <!-- Active Upload Container -->
+        <div class="active-upload-container hidden" id="activeUploadContainer">
+          <div class="upload-info-bar">
+            <div class="file-meta">
+              <span class="file-name" id="uploadFileName">filename.mp4</span>
+              <span class="file-size-badge" id="uploadFileSize">0 MB</span>
+            </div>
+            <div class="upload-actions">
+              <button class="btn btn-sm btn-secondary" id="pauseBtn">Pause</button>
+              <button class="btn btn-sm btn-secondary hidden" id="resumeBtn">Resume</button>
+              <button class="btn btn-sm btn-danger" id="cancelBtn">Cancel</button>
+            </div>
+          </div>
+
+          <!-- Main Progress Bar -->
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+          </div>
+
+          <!-- Speed & ETA Stats -->
+          <div class="stats-row">
+            <div><span class="stat-label">Progress:</span> <span id="statPercent">0%</span></div>
+            <div><span class="stat-label">Speed:</span> <span id="statSpeed">0 MB/s</span></div>
+            <div><span class="stat-label">ETA:</span> <span id="statEta">--</span></div>
+            <div><span class="stat-label">Chunks:</span> <span id="statChunks">0 / 0</span></div>
+          </div>
+
+          <!-- Realtime Chunk Visualizer Grid -->
+          <div class="chunk-visualizer-section">
+            <h4>Live Chunk Matrix (Each box = 1 HTTP Request)</h4>
+            <div class="chunk-grid" id="chunkGrid"></div>
+            <div class="chunk-legend">
+              <span class="legend-item"><span class="box done"></span> Done</span>
+              <span class="legend-item"><span class="box uploading"></span> Uploading</span>
+              <span class="legend-item"><span class="box pending"></span> Pending</span>
+              <span class="legend-item"><span class="box error"></span> Retry</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Storage & File Gallery -->
+      <section class="gallery-section card">
+        <div class="card-header">
+          <h2>📂 Server Files & Streams</h2>
+          <button class="btn btn-sm btn-secondary" id="refreshFilesBtn">🔄 Refresh</button>
+        </div>
+
+        <div class="file-list-container" id="fileListContainer">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">📁</div>
+            <p>No files uploaded yet. Drag & drop a video to test!</p>
+          </div>
+          <div class="file-grid" id="fileGrid"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Video Streaming Modal -->
+  <div class="modal-overlay hidden" id="videoModal">
+    <div class="modal-content card">
+      <div class="modal-header">
+        <h3 id="modalVideoTitle">Stream Video</h3>
+        <button class="modal-close" id="closeModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <video id="videoPlayer" controls preload="metadata" class="video-element">
+          Your browser does not support HTML5 video streaming.
+        </video>
+        <div class="stream-debugger card">
+          <h4>⚡ HTTP 206 Byte-Range Debugger</h4>
+          <p class="debug-text">Seeking in the video sends standard HTTP 206 Range headers, streaming exact byte chunks without buffering full video files over Cloudflare Tunnel.</p>
+          <div class="range-log" id="rangeLog">Waiting for video stream events...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/lib/uploader-client.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

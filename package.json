@@ -1,0 +1,25 @@
+{
+  "name": "cloudflare-tunnel-uploader",
+  "version": "1.0.0",
+  "description": "Resumable chunked upload & byte-range streaming solution for Cloudflare Tunnel self-hosted apps",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node scripts/test-uploader.js"
+  },
+  "keywords": [
+    "cloudflare-tunnel",
+    "chunked-upload",
+    "resumable-upload",
+    "video-streaming",
+    "range-requests"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "mime-types": "^2.1.35"
+  }
+}

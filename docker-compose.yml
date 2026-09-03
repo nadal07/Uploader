@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # Main Uploader & Streaming Application Server
+  uploader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cloudflare_uploader
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persistent storage on host machine for uploaded files
+      - ./uploads:/app/uploads
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+
+  # Optional Cloudflare Tunnel container
+  # Uncomment and add your TUNNEL_TOKEN if you want Cloudflare Tunnel running in Docker!
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: cloudflare_tunnel
+  #   restart: unless-stopped
+  #   command: tunnel --no-autoupdate run
+  #   environment:
+  #     - TUNNEL_TOKEN=YOUR_CLOUDFLARE_TUNNEL_TOKEN_HERE
