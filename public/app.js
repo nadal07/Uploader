@@ -722,7 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
         row.innerHTML = `
           <div class="folder-row-meta">
             <h5>${escapeHtml(f.name)}</h5>
-            <p><code>${escapeHtml(f.systemPath || f.folderPath)}</code></p>
+            <p><code title="${escapeHtml(f.systemPath || f.folderPath)}">${escapeHtml(f.systemPath || f.folderPath)}</code></p>
             <p style="margin-top:2px;"><strong>Users:</strong> ${usersSummary}</p>
           </div>
           <div class="folder-row-actions">

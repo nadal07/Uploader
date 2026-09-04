@@ -1,4 +1,4 @@
-# VaultStream — Enterprise Chunked File Uploader & Media Server
+# VaultStream — Resumable Chunked File Uploader & Media Server
 
 VaultStream is a high-performance, resilient, resumable chunked upload and HTTP 206 byte-range streaming solution designed for self-hosted infrastructure, NAS systems, and reverse proxies.
 
