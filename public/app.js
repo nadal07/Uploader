@@ -927,12 +927,12 @@ document.addEventListener('DOMContentLoaded', () => {
     promptConfirmPassword.value = '';
 
     if (user.role === 'admin') {
-      changePasswordModalTitle.textContent = '🔒 Mandatory: Set New Admin Password';
+      changePasswordModalTitle.textContent = 'Mandatory: Set New Admin Password';
       changePasswordModalSubtitle.textContent = 'For security, you must change the default administrator password before accessing the system.';
       closeChangePasswordModalBtn.classList.add('hidden');
       skipPasswordBtn.classList.add('hidden');
     } else {
-      changePasswordModalTitle.textContent = '🔒 Recommended: Set a Personal Password';
+      changePasswordModalTitle.textContent = 'Recommended: Set a Personal Password';
       changePasswordModalSubtitle.textContent = 'You are logged in with an initial password. Would you like to set your own password?';
       closeChangePasswordModalBtn.classList.remove('hidden');
       skipPasswordBtn.classList.remove('hidden');
@@ -1001,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function openAdminResetPasswordModal(userId, username) {
     adminResetTargetUserId = userId;
     adminResetTargetUsername = username;
-    adminResetPasswordTitle.textContent = `🔑 Change Password for @${username}`;
+    adminResetPasswordTitle.textContent = `Change Password for @${username}`;
     adminResetPasswordSubtitle.textContent = `Set a new password for @${username}:`;
     adminNewUserPassword.value = '';
     adminRequireChangeCheckbox.checked = true;
