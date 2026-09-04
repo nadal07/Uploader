@@ -17,12 +17,24 @@
         <div class="logo-icon">⚡</div>
         <div>
           <h1>Cloudflare Tunnel Uploader</h1>
-          <p class="subtitle">Bypass 100MB/300MB Payload Limits with Resumable Chunking & Byte-Range Video Streaming</p>
+          <p class="subtitle">Resumable Chunking, Folder Access Control & Byte-Range Video Streaming</p>
         </div>
       </div>
-      <div class="status-badge" id="tunnelStatusBadge">
-        <span class="pulse-dot"></span>
-        <span class="status-text">Cloudflare Ready (10MB Chunks)</span>
+      <div class="header-right">
+        <div class="status-badge" id="tunnelStatusBadge">
+          <span class="pulse-dot"></span>
+          <span class="status-text">Cloudflare Ready (10MB)</span>
+        </div>
+        <!-- User Profile Area -->
+        <div class="user-profile-area hidden" id="userProfileArea">
+          <div class="user-info-pill">
+            <span class="user-avatar">👤</span>
+            <span class="user-name" id="currentUsername">User</span>
+            <span class="role-badge" id="currentUserRole">user</span>
+          </div>
+          <button class="btn btn-sm btn-secondary hidden" id="adminConsoleBtn">🛠️ Admin Console</button>
+          <button class="btn btn-sm btn-danger" id="logoutBtn">Logout</button>
+        </div>
       </div>
     </header>
 
@@ -33,6 +45,17 @@
         <div class="card-header">
           <h2>📤 Large File Uploader</h2>
           <div class="config-toggle" id="configToggleBtn">⚙️ Settings</div>
+        </div>
+
+        <!-- Target Folder Selector -->
+        <div class="folder-selector-box">
+          <label for="targetFolderSelect" class="folder-label">
+            <span>📁 Destination Folder:</span>
+            <span class="folder-note">(Admin granted access)</span>
+          </label>
+          <select id="targetFolderSelect" class="styled-select">
+            <option value="" disabled selected>Loading accessible folders...</option>
+          </select>
         </div>
 
         <!-- Settings Drawer -->
@@ -74,6 +97,7 @@
             <div class="file-meta">
               <span class="file-name" id="uploadFileName">filename.mp4</span>
               <span class="file-size-badge" id="uploadFileSize">0 MB</span>
+              <span class="folder-badge" id="uploadFolderBadge">📁 General</span>
             </div>
             <div class="upload-actions">
               <button class="btn btn-sm btn-secondary" id="pauseBtn">Pause</button>
@@ -113,18 +137,136 @@
       <section class="gallery-section card">
         <div class="card-header">
           <h2>📂 Server Files & Streams</h2>
-          <button class="btn btn-sm btn-secondary" id="refreshFilesBtn">🔄 Refresh</button>
+          <div class="gallery-header-actions">
+            <select id="folderFilterSelect" class="styled-select-sm">
+              <option value="ALL">All Folders</option>
+            </select>
+            <button class="btn btn-sm btn-secondary" id="refreshFilesBtn">🔄 Refresh</button>
+          </div>
         </div>
 
         <div class="file-list-container" id="fileListContainer">
           <div class="empty-state" id="emptyState">
             <div class="empty-icon">📁</div>
-            <p>No files uploaded yet. Drag & drop a video to test!</p>
+            <p>No files found in selected folder. Upload a file to test!</p>
           </div>
           <div class="file-grid" id="fileGrid"></div>
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- Login Modal -->
+  <div class="modal-overlay hidden" id="loginModal">
+    <div class="modal-content auth-modal card">
+      <div class="modal-header">
+        <div class="auth-header-title">
+          <span class="auth-icon">🔐</span>
+          <div>
+            <h3>Sign In to Uploader</h3>
+            <p class="auth-subtitle">Access authorized folders and Cloudflare stream services</p>
+          </div>
+        </div>
+      </div>
+      <form id="loginForm" class="auth-form">
+        <div class="form-group">
+          <label for="loginUsername">Username</label>
+          <input type="text" id="loginUsername" class="form-input" placeholder="admin or username" required autofocus autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <div class="error-msg hidden" id="loginErrorMsg"></div>
+        <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        <div class="auth-hint">
+          <p>Initial Setup Default: <code>admin</code> / <code>admin123</code></p>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin Console Modal -->
+  <div class="modal-overlay hidden" id="adminModal">
+    <div class="modal-content admin-modal card">
+      <div class="modal-header">
+        <div class="admin-header-title">
+          <h3>🛠️ Admin Management Console</h3>
+          <p class="auth-subtitle">Manage users, passwords, and folder upload permissions</p>
+        </div>
+        <button class="modal-close" id="closeAdminModalBtn">&times;</button>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="tab-btn active" id="tabUsersBtn">👥 Users & Permissions</button>
+        <button class="tab-btn" id="tabFoldersBtn">📁 Folder Management</button>
+      </div>
+
+      <!-- Tab 1: User Management -->
+      <div class="tab-content" id="tabUsersContent">
+        <div class="admin-panel-grid">
+          <!-- Create User Form -->
+          <div class="sub-card">
+            <h4>Add New User</h4>
+            <form id="createUserForm" class="sub-form">
+              <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="newUsername" class="form-input" required placeholder="e.g. john">
+              </div>
+              <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="newPassword" class="form-input" required placeholder="Minimum 4 chars">
+              </div>
+              <div class="form-group">
+                <label>Role</label>
+                <select id="newRole" class="form-input">
+                  <option value="user" selected>Regular User</option>
+                  <option value="admin">Administrator (All Folders)</option>
+                </select>
+              </div>
+              <div class="form-group" id="folderCheckboxesGroup">
+                <label>Allowed Folders:</label>
+                <div class="checkbox-list" id="allowedFoldersCheckboxList"></div>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">Create User</button>
+            </form>
+          </div>
+
+          <!-- Existing Users List -->
+          <div class="sub-card">
+            <h4>Existing Users</h4>
+            <div class="users-list-container" id="adminUsersList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Folder Management -->
+      <div class="tab-content hidden" id="tabFoldersContent">
+        <div class="admin-panel-grid">
+          <!-- Create Folder Form -->
+          <div class="sub-card">
+            <h4>Create New Folder</h4>
+            <form id="createFolderForm" class="sub-form">
+              <div class="form-group">
+                <label>Folder Name</label>
+                <input type="text" id="newFolderName" class="form-input" required placeholder="e.g. Movies, Backups">
+              </div>
+              <div class="form-group">
+                <label>Description (Optional)</label>
+                <input type="text" id="newFolderDesc" class="form-input" placeholder="e.g. 4K Video storage">
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">Create Folder</button>
+            </form>
+          </div>
+
+          <!-- Existing Folders List -->
+          <div class="sub-card">
+            <h4>Current Folders</h4>
+            <div class="folders-list-container" id="adminFoldersList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Video Streaming Modal -->
