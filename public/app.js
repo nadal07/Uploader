@@ -66,8 +66,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const adminUsersList = document.getElementById('adminUsersList');
   const createFolderForm = document.getElementById('createFolderForm');
   const newFolderName = document.getElementById('newFolderName');
+  const newFolderSystemPath = document.getElementById('newFolderSystemPath');
   const newFolderDesc = document.getElementById('newFolderDesc');
   const adminFoldersList = document.getElementById('adminFoldersList');
+
+  // Elements - Permission Editor Modal
+  const permissionModal = document.getElementById('permissionModal');
+  const permissionModalTitle = document.getElementById('permissionModalTitle');
+  const permissionModalSubtitle = document.getElementById('permissionModalSubtitle');
+  const permissionCheckboxesList = document.getElementById('permissionCheckboxesList');
+  const savePermissionsBtn = document.getElementById('savePermissionsBtn');
+  const cancelPermissionBtn = document.getElementById('cancelPermissionBtn');
+  const closePermissionModalBtn = document.getElementById('closePermissionModalBtn');
+
+  let adminUsersCache = [];
+  let permissionContext = { type: null, targetId: null, targetName: null };
 
   // Elements - Video Stream Modal
   const videoModal = document.getElementById('videoModal');
@@ -523,40 +536,53 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await authFetch('/api/admin/users');
       if (!res.ok) return;
       const users = await res.json();
+      adminUsersCache = users;
 
       adminUsersList.innerHTML = '';
       users.forEach((u) => {
         const row = document.createElement('div');
         row.className = 'user-row';
 
-        let foldersText = 'None';
+        let foldersHtml = '';
         if (u.role === 'admin' || (u.allowedFolderIds && u.allowedFolderIds.includes('*'))) {
-          foldersText = 'All Folders (Admin)';
+          foldersHtml = '<span class="role-badge admin">All Folders (Admin)</span>';
         } else if (u.allowedFolderIds && u.allowedFolderIds.length > 0) {
-          const names = u.allowedFolderIds
+          const tags = u.allowedFolderIds
             .map((id) => {
               const f = accessibleFolders.find((folder) => folder.id === id);
-              return f ? f.name : id;
+              return `<span class="file-tag">📁 ${escapeHtml(f ? f.name : id)}</span>`;
             })
-            .join(', ');
-          foldersText = names || 'Assigned Folders';
+            .join(' ');
+          foldersHtml = `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">${tags}</div>`;
+        } else {
+          foldersHtml = '<span class="folder-note" style="color:#f87171;">⚠️ No folders assigned</span>';
         }
 
         row.innerHTML = `
           <div class="user-row-meta">
             <h5>${escapeHtml(u.username)} <span class="role-badge ${u.role}">${u.role}</span></h5>
-            <p>Access: ${escapeHtml(foldersText)}</p>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Folder Access: ${foldersHtml}</div>
           </div>
           <div class="user-row-actions">
+            ${u.role !== 'admin' ? `<button class="btn btn-sm btn-secondary edit-access-btn" data-id="${u.id}" data-username="${escapeHtml(u.username)}">🔑 Edit Access</button>` : ''}
             ${u.username !== 'admin' ? `<button class="btn btn-sm btn-danger delete-user-btn" data-id="${u.id}">Delete</button>` : '<span class="folder-note">Protected</span>'}
           </div>
         `;
         adminUsersList.appendChild(row);
       });
 
+      // Edit user folder access
+      document.querySelectorAll('.edit-access-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const userId = e.currentTarget.getAttribute('data-id');
+          const username = e.currentTarget.getAttribute('data-username');
+          openUserPermissionsModal(userId, username);
+        });
+      });
+
       document.querySelectorAll('.delete-user-btn').forEach((btn) => {
         btn.addEventListener('click', async (e) => {
-          const userId = e.target.getAttribute('data-id');
+          const userId = e.currentTarget.getAttribute('data-id');
           if (confirm('Delete this user?')) {
             const delRes = await authFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
             if (delRes.ok) {
@@ -585,15 +611,30 @@ document.addEventListener('DOMContentLoaded', () => {
       allowedFoldersCheckboxList.innerHTML = '';
 
       accessibleFolders.forEach((f) => {
+        // Calculate assigned users
+        const assignedUsers = adminUsersCache.filter(
+          (u) =>
+            u.role !== 'admin' &&
+            u.allowedFolderIds &&
+            u.allowedFolderIds.includes(f.id)
+        );
+        const usersSummary =
+          assignedUsers.length > 0
+            ? assignedUsers.map((u) => `@${escapeHtml(u.username)}`).join(', ')
+            : '<span class="folder-note">Admin only</span>';
+
         // Render in folder list
         const row = document.createElement('div');
         row.className = 'folder-row';
         row.innerHTML = `
           <div class="folder-row-meta">
-            <h5>📁 ${escapeHtml(f.name)} <code>/${escapeHtml(f.folderPath)}</code></h5>
-            <p>${escapeHtml(f.description || 'No description')} • by @${escapeHtml(f.createdBy)}</p>
+            <h5>📁 ${escapeHtml(f.name)}</h5>
+            <p><code>${escapeHtml(f.systemPath || f.folderPath)}</code></p>
+            <p style="margin-top:2px;"><strong>👥 Users:</strong> ${usersSummary}</p>
           </div>
           <div class="folder-row-actions">
+            <button class="btn btn-sm btn-secondary manage-folder-users-btn" data-id="${f.id}" data-name="${escapeHtml(f.name)}" title="Manage which users can access this folder">👥 Access</button>
+            <button class="btn btn-sm btn-secondary scan-folder-btn" data-id="${f.id}" title="Scan for files already on disk">🔍 Scan</button>
             ${f.id !== 'f_general' ? `<button class="btn btn-sm btn-danger delete-folder-btn" data-id="${f.id}">Delete</button>` : ''}
           </div>
         `;
@@ -609,9 +650,42 @@ document.addEventListener('DOMContentLoaded', () => {
         allowedFoldersCheckboxList.appendChild(label);
       });
 
+      // Manage folder access button listeners
+      document.querySelectorAll('.manage-folder-users-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const folderId = e.currentTarget.getAttribute('data-id');
+          const folderName = e.currentTarget.getAttribute('data-name');
+          openFolderPermissionsModal(folderId, folderName);
+        });
+      });
+
+      // Scan folder button listeners
+      document.querySelectorAll('.scan-folder-btn').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          const folderId = e.currentTarget.getAttribute('data-id');
+          btn.disabled = true;
+          btn.textContent = 'Scanning...';
+          try {
+            const res = await authFetch(`/api/folders/${folderId}/scan`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+              alert(`🔍 Scan Complete: ${data.totalFound} items found on disk, ${data.newlyDiscovered} newly indexed!`);
+              loadFiles();
+            } else {
+              alert(data.error || 'Scan failed');
+            }
+          } catch (err) {
+            alert(`Scan error: ${err.message}`);
+          } finally {
+            btn.disabled = false;
+            btn.textContent = '🔍 Scan';
+          }
+        });
+      });
+
       document.querySelectorAll('.delete-folder-btn').forEach((btn) => {
         btn.addEventListener('click', async (e) => {
-          const folderId = e.target.getAttribute('data-id');
+          const folderId = e.currentTarget.getAttribute('data-id');
           if (confirm('Delete this folder? Existing files will remain on disk.')) {
             const delRes = await authFetch(`/api/folders/${folderId}`, { method: 'DELETE' });
             if (delRes.ok) {
@@ -630,6 +704,119 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error loading admin folders:', err);
     }
   }
+
+  // ==========================================
+  // PERMISSION EDITOR MODAL LOGIC
+  // ==========================================
+  function openUserPermissionsModal(userId, username) {
+    permissionContext = { type: 'user', targetId: userId, targetName: username };
+    permissionModalTitle.textContent = `🔑 Folder Access for @${username}`;
+    permissionModalSubtitle.textContent = `Select which folders @${username} can view and upload to:`;
+
+    const targetUser = adminUsersCache.find((u) => u.id === userId);
+    const userFolderSet = new Set((targetUser && targetUser.allowedFolderIds) || []);
+
+    permissionCheckboxesList.innerHTML = '';
+    if (accessibleFolders.length === 0) {
+      permissionCheckboxesList.innerHTML = '<p class="folder-note">No folders exist yet. Create a folder first.</p>';
+    } else {
+      accessibleFolders.forEach((f) => {
+        const label = document.createElement('label');
+        label.className = 'checkbox-item';
+        label.style.padding = '6px 8px';
+        label.style.borderRadius = '4px';
+        const isChecked = userFolderSet.has(f.id);
+        label.innerHTML = `
+          <input type="checkbox" name="permItem" value="${f.id}" ${isChecked ? 'checked' : ''}>
+          <span>📁 <strong>${escapeHtml(f.name)}</strong> <small style="color:var(--text-muted); font-size:0.75rem;">(${escapeHtml(f.systemPath || f.folderPath)})</small></span>
+        `;
+        permissionCheckboxesList.appendChild(label);
+      });
+    }
+
+    permissionModal.classList.remove('hidden');
+  }
+
+  function openFolderPermissionsModal(folderId, folderName) {
+    permissionContext = { type: 'folder', targetId: folderId, targetName: folderName };
+    permissionModalTitle.textContent = `👥 User Access for "${folderName}"`;
+    permissionModalSubtitle.textContent = `Select which users can view and upload to this folder:`;
+
+    const regularUsers = adminUsersCache.filter((u) => u.role !== 'admin');
+
+    permissionCheckboxesList.innerHTML = '';
+    if (regularUsers.length === 0) {
+      permissionCheckboxesList.innerHTML = '<p class="folder-note">No regular users created yet.</p>';
+    } else {
+      regularUsers.forEach((u) => {
+        const label = document.createElement('label');
+        label.className = 'checkbox-item';
+        label.style.padding = '6px 8px';
+        label.style.borderRadius = '4px';
+        const hasAccess = u.allowedFolderIds && u.allowedFolderIds.includes(folderId);
+        label.innerHTML = `
+          <input type="checkbox" name="permItem" value="${u.id}" ${hasAccess ? 'checked' : ''}>
+          <span>👤 <strong>@${escapeHtml(u.username)}</strong></span>
+        `;
+        permissionCheckboxesList.appendChild(label);
+      });
+    }
+
+    permissionModal.classList.remove('hidden');
+  }
+
+  // Save Permissions Button Handler
+  savePermissionsBtn.addEventListener('click', async () => {
+    savePermissionsBtn.disabled = true;
+    savePermissionsBtn.textContent = 'Saving...';
+
+    const selectedIds = [];
+    document
+      .querySelectorAll('input[name="permItem"]:checked')
+      .forEach((cb) => selectedIds.push(cb.value));
+
+    try {
+      if (permissionContext.type === 'user') {
+        const res = await authFetch(`/api/admin/users/${permissionContext.targetId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ allowedFolderIds: selectedIds }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to update user permissions');
+
+        alert(`✅ Folder access updated for @${permissionContext.targetName}!`);
+      } else if (permissionContext.type === 'folder') {
+        const res = await authFetch(`/api/folders/${permissionContext.targetId}/users`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userIds: selectedIds }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to update folder access');
+
+        alert(`✅ User permissions updated for "${permissionContext.targetName}"!`);
+      }
+
+      permissionModal.classList.add('hidden');
+      await loadAdminUsers();
+      await loadAdminFolders();
+      await loadFiles();
+    } catch (err) {
+      alert(`Error saving permissions: ${err.message}`);
+    } finally {
+      savePermissionsBtn.disabled = false;
+      savePermissionsBtn.textContent = 'Save Permissions';
+    }
+  });
+
+  closePermissionModalBtn.addEventListener('click', () => {
+    permissionModal.classList.add('hidden');
+  });
+
+  cancelPermissionBtn.addEventListener('click', () => {
+    permissionModal.classList.add('hidden');
+  });
 
   // Create User Form Handler
   createUserForm.addEventListener('submit', async (e) => {
@@ -670,19 +857,20 @@ document.addEventListener('DOMContentLoaded', () => {
   createFolderForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = newFolderName.value.trim();
+    const systemPath = newFolderSystemPath ? newFolderSystemPath.value.trim() : '';
     const description = newFolderDesc.value.trim();
 
     try {
       const res = await authFetch('/api/folders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify({ name, systemPath, description }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create folder');
 
-      alert(`✅ Folder "${name}" created successfully!`);
+      alert(`✅ System Folder "${name}" created!\nPath: ${data.folder.systemPath}`);
       createFolderForm.reset();
       loadAdminFolders();
     } catch (err) {

@@ -11,11 +11,22 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # Persistent storage on host machine for uploaded files
+      # Persistent app metadata & upload buffer
       - ./uploads:/app/uploads
+
+      # ==========================================================
+      # ACTUAL SYSTEM FOLDERS (Host machine directories)
+      # Mount any real folders from your host machine below:
+      # e.g.: - /mnt/storage:/mnt/storage
+      #       - /home/user/Videos:/storage/videos
+      #       - /media/movies:/media/movies
+      # ==========================================================
+      - ./storage:/storage
+
     environment:
       - PORT=3000
       - NODE_ENV=production
+      - ADMIN_PASSWORD=admin123
 
   # Optional Cloudflare Tunnel container
   # Uncomment and add your TUNNEL_TOKEN if you want Cloudflare Tunnel running in Docker!

@@ -245,17 +245,22 @@
         <div class="admin-panel-grid">
           <!-- Create Folder Form -->
           <div class="sub-card">
-            <h4>Create New Folder</h4>
+            <h4>Create New System Folder</h4>
             <form id="createFolderForm" class="sub-form">
               <div class="form-group">
-                <label>Folder Name</label>
+                <label>Folder Display Name</label>
                 <input type="text" id="newFolderName" class="form-input" required placeholder="e.g. Movies, Backups">
+              </div>
+              <div class="form-group">
+                <label>Actual System Directory Path</label>
+                <input type="text" id="newFolderSystemPath" class="form-input" placeholder="e.g. /mnt/storage/movies or /data/videos">
+                <span class="folder-note">Points to an actual folder on your server. Leave blank to auto-create in project storage.</span>
               </div>
               <div class="form-group">
                 <label>Description (Optional)</label>
                 <input type="text" id="newFolderDesc" class="form-input" placeholder="e.g. 4K Video storage">
               </div>
-              <button type="submit" class="btn btn-primary btn-sm">Create Folder</button>
+              <button type="submit" class="btn btn-primary btn-sm">Create System Folder</button>
             </form>
           </div>
 
@@ -264,6 +269,26 @@
             <h4>Current Folders</h4>
             <div class="folders-list-container" id="adminFoldersList"></div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Permission Editor Modal -->
+  <div class="modal-overlay hidden" id="permissionModal">
+    <div class="modal-content auth-modal card">
+      <div class="modal-header">
+        <div>
+          <h3 id="permissionModalTitle">🔑 Edit Folder Permissions</h3>
+          <p class="auth-subtitle" id="permissionModalSubtitle">Grant or revoke access permissions</p>
+        </div>
+        <button class="modal-close" id="closePermissionModalBtn">&times;</button>
+      </div>
+      <div class="permission-body">
+        <div class="checkbox-list" id="permissionCheckboxesList" style="max-height: 240px; margin-top: 10px;"></div>
+        <div style="display: flex; gap: 10px; margin-top: 16px;">
+          <button class="btn btn-primary btn-full" id="savePermissionsBtn">Save Permissions</button>
+          <button class="btn btn-secondary" id="cancelPermissionBtn">Cancel</button>
         </div>
       </div>
     </div>
