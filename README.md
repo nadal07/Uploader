@@ -31,8 +31,12 @@ When self-hosting an application and exposing it via Cloudflare Tunnel:
   - Save files directly into any real server directory (`/mnt/media`, `/var/data`, `./storage/movies`).
   - Scan existing files on disk with the click of a button.
 - **User Authentication & Roles**:
-  - `Admin`: Full access, manages users, passwords, and maps system folders.
+  - `Admin`: Full access, manages users, folder mappings, and resets user passwords.
   - `User`: Can only view and upload to folders explicitly granted by the Admin.
+- **First-Login Password Management**:
+  - **Mandatory Admin Change**: The default administrator is required to set a new password on first login (cannot be skipped or dismissed).
+  - **Optional User Change**: New users are prompted to set a personal password upon first login, but can opt out using "Skip for Now".
+  - **Admin Password Reset**: Admins can reset the password for any user at any time and optionally re-enable the next-login password prompt.
 - **Destination Folder Selection**: Users choose which actual system folder to upload into.
 - **Live Chunk Matrix Visualizer**: Real-time dashboard showing every chunk's state (`Done`, `Uploading`, `Pending`, `Retry`).
 - **Instant Video Playback**: Built-in video player with live HTTP 206 Byte-Range debugging.
@@ -40,13 +44,16 @@ When self-hosting an application and exposing it via Cloudflare Tunnel:
 
 ---
 
-## 🔐 Default Credentials (Initial Setup)
+## 🔐 Default Credentials & First Login Policy
 
 On first run, the server automatically bootstraps an administrator account:
 - **Username**: `admin`
 - **Password**: `admin123` *(or configured via `ADMIN_PASSWORD` environment variable)*
 
-Log in as `admin` to create additional users, map actual server folders, and assign folder permissions via the **🛠️ Admin Console**.
+### First Login Flow
+1. **Admin**: When `admin` logs in for the first time, a **mandatory modal** appears requiring a new secure password. Navigation and skipping are blocked until a new password is saved.
+2. **Users**: When created, users are prompted on first login with an option to change their password or **Skip for Now**.
+3. **Admin Resets**: In the Admin Console under the **Users & Permissions** tab, click **🔑 Password** next to any user to assign a new password immediately.
 
 ---
 
@@ -119,14 +126,19 @@ npm run dev
 
 | Endpoint | Method | Auth | Description |
 | :--- | :--- | :--- | :--- |
-| `/api/auth/login` | `POST` | Public | Authenticates user; returns JWT token and accessible folders. |
+| `/api/auth/login` | `POST` | Public | Authenticates user; returns JWT token, `mustChangePassword`, and folders. |
 | `/api/auth/me` | `GET` | User | Retrieves current user profile and folder permissions. |
+| `/api/auth/password` | `PUT` | User | Updates caller's password; clears `mustChangePassword`. |
+| `/api/auth/skip-password-change`| `POST` | User | Skips first-login prompt (blocked for admin). |
 | `/api/folders` | `GET` | User | Lists folders accessible to current user (all for admin). |
 | `/api/folders` | `POST` | Admin | Maps a new folder to an **actual system directory path**. |
 | `/api/folders/:folderId/scan`| `POST` | Admin | **Scans actual system folder** on disk to index existing files. |
+| `/api/folders/:folderId/users`| `GET` | Admin | Gets users authorized for a specific folder. |
+| `/api/folders/:folderId/users`| `PUT` | Admin | Updates authorized users for a specific folder. |
 | `/api/folders/:folderId` | `DELETE` | Admin | Deletes a folder mapping (files remain intact on disk). |
 | `/api/admin/users` | `GET` | Admin | Lists all registered users and their folder permissions. |
 | `/api/admin/users` | `POST` | Admin | Creates a user with assigned `allowedFolderIds`. |
+| `/api/admin/users/:userId`| `PUT` | Admin | Updates user role, permissions, or **resets password**. |
 | `/api/admin/users/:userId`| `DELETE` | Admin | Deletes a user account. |
 | `/api/init` | `POST` | User | Initializes upload session for authorized `folderId`. |
 | `/api/chunk` | `POST` | User | Uploads an individual binary chunk (<10MB). |

@@ -27,16 +27,47 @@ async function runTests() {
   const baseUrl = `http://localhost:${PORT}/api`;
 
   try {
-    // 1. Admin logs in
-    console.log('1️⃣ Admin login...');
+    // 1. Admin logs in with default credentials
+    console.log('1️⃣ Admin login with default credentials...');
     const adminLoginRes = await httpRequest(
       `${baseUrl}/auth/login`,
       'POST',
       { 'Content-Type': 'application/json' },
       JSON.stringify({ username: 'admin', password: 'admin123' })
     );
-    const adminToken = JSON.parse(adminLoginRes.body).token;
-    console.log('   - ✅ Admin logged in.');
+    const adminLoginData = JSON.parse(adminLoginRes.body);
+    const adminToken = adminLoginData.token;
+    console.log(`   - Admin mustChangePassword status: ${adminLoginData.user.mustChangePassword}`);
+    if (adminLoginData.user.mustChangePassword !== true) {
+      throw new Error('Default admin should have mustChangePassword: true');
+    }
+    console.log('   - ✅ Admin requires mandatory password change.');
+
+    // 1b. Admin attempts to skip password change -> Should be 403 Forbidden
+    console.log('   - Testing Admin attempting to skip password change...');
+    const adminSkipRes = await httpRequest(
+      `${baseUrl}/auth/skip-password-change`,
+      'POST',
+      { Authorization: `Bearer ${adminToken}` }
+    );
+    if (adminSkipRes.statusCode !== 403) {
+      throw new Error(`Admin should NOT be allowed to skip password change (got ${adminSkipRes.statusCode})`);
+    }
+    console.log('   - ✅ Confirmed: Admin cannot skip password change (403 Forbidden).');
+
+    // 1c. Admin updates their own password
+    console.log('   - Admin changes password to new secure password...');
+    const adminChangePassRes = await httpRequest(
+      `${baseUrl}/auth/password`,
+      'PUT',
+      { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      JSON.stringify({ newPassword: 'newAdminPassword2026' })
+    );
+    const adminChangedUser = JSON.parse(adminChangePassRes.body).user;
+    if (adminChangedUser.mustChangePassword !== false) {
+      throw new Error('Admin mustChangePassword should be false after password change');
+    }
+    console.log('   - ✅ Admin password updated, mustChangePassword is now false.');
 
     // 2. Admin creates two separate system folders
     console.log('\n2️⃣ Admin creates two distinct physical folders on the system:');
@@ -217,6 +248,80 @@ async function runTests() {
       throw new Error(`Expected 403 Forbidden after revoke, got ${reblockedRes.statusCode}`);
     }
     console.log('   - ✅ Confirmed: User A is immediately blocked with 403 Forbidden after permission revoke!');
+
+    // 10. User Password Skip & Admin Password Reset Workflow
+    console.log('\n🔟 Testing User Password Change, Opt-Out/Skip, and Admin Password Reset:');
+
+    // 10a. Verify User A initial login has mustChangePassword: true
+    console.log('   - Checking User A mustChangePassword flag...');
+    const userALoginData = JSON.parse(loginUserARes.body);
+    if (userALoginData.user.mustChangePassword !== true) {
+      throw new Error('User A should have mustChangePassword: true on initial creation');
+    }
+    console.log('   - ✅ User A requires password change (optional prompt).');
+
+    // 10b. User A opts out / skips password change
+    console.log('   - User A skips password change (POST /api/auth/skip-password-change)...');
+    const userASkipRes = await httpRequest(
+      `${baseUrl}/auth/skip-password-change`,
+      'POST',
+      { Authorization: `Bearer ${userAToken}` }
+    );
+    if (userASkipRes.statusCode !== 200) {
+      throw new Error(`User A should be able to skip password change, got ${userASkipRes.statusCode}`);
+    }
+    const userASkipData = JSON.parse(userASkipRes.body);
+    if (userASkipData.user.mustChangePassword !== false) {
+      throw new Error('User A mustChangePassword should be false after skip');
+    }
+    console.log('   - ✅ User A successfully skipped password change (mustChangePassword: false).');
+
+    // 10c. Admin resets User A's password and sets mustChangePassword: true
+    console.log('   - Admin resets User A password (PUT /api/admin/users/:userId)...');
+    const resetUserARes = await httpRequest(
+      `${baseUrl}/admin/users/${userA.id}`,
+      'PUT',
+      { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      JSON.stringify({ password: 'userA_reset_pass_2026', mustChangePassword: true })
+    );
+    if (resetUserARes.statusCode !== 200) {
+      throw new Error(`Admin should be able to reset user password, got ${resetUserARes.statusCode}`);
+    }
+    console.log('   - ✅ Admin successfully updated User A password.');
+
+    // 10d. User A logs in with new password
+    console.log('   - User A logs in with new admin-set password...');
+    const userANewLoginRes = await httpRequest(
+      `${baseUrl}/auth/login`,
+      'POST',
+      { 'Content-Type': 'application/json' },
+      JSON.stringify({ username: 'usera', password: 'userA_reset_pass_2026' })
+    );
+    if (userANewLoginRes.statusCode !== 200) {
+      throw new Error(`User A should be able to log in with reset password, got ${userANewLoginRes.statusCode}`);
+    }
+    const userANewLoginData = JSON.parse(userANewLoginRes.body);
+    if (userANewLoginData.user.mustChangePassword !== true) {
+      throw new Error('User A mustChangePassword should be true after admin reset with flag');
+    }
+    console.log('   - ✅ User A logged in with new password and mustChangePassword is true.');
+
+    // 10e. User A changes own password to final password
+    console.log('   - User A changes own password (PUT /api/auth/password)...');
+    const userAFinalPassRes = await httpRequest(
+      `${baseUrl}/auth/password`,
+      'PUT',
+      { 'Content-Type': 'application/json', Authorization: `Bearer ${userANewLoginData.token}` },
+      JSON.stringify({ newPassword: 'userA_final_secure_pass_99' })
+    );
+    if (userAFinalPassRes.statusCode !== 200) {
+      throw new Error(`User A should be able to update own password, got ${userAFinalPassRes.statusCode}`);
+    }
+    const userAFinalData = JSON.parse(userAFinalPassRes.body);
+    if (userAFinalData.user.mustChangePassword !== false) {
+      throw new Error('User A mustChangePassword should be false after change');
+    }
+    console.log('   - ✅ User A password updated, mustChangePassword is now false.');
 
     console.log('\n======================================================================');
     console.log('🎉 ALL MULTI-USER FOLDER PERMISSION TESTS PASSED! (100% PASS)');

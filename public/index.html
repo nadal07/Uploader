@@ -294,6 +294,67 @@
     </div>
   </div>
 
+  <!-- Change Password Prompt Modal (First-Login) -->
+  <div class="modal-overlay hidden" id="changePasswordModal">
+    <div class="modal-content auth-modal card">
+      <div class="modal-header">
+        <div class="auth-header-title">
+          <span class="auth-icon">🔒</span>
+          <div>
+            <h3 id="changePasswordModalTitle">Change Password</h3>
+            <p class="auth-subtitle" id="changePasswordModalSubtitle">Please set a new password</p>
+          </div>
+        </div>
+        <button class="modal-close hidden" id="closeChangePasswordModalBtn">&times;</button>
+      </div>
+      <form id="changePasswordForm" class="auth-form">
+        <div class="form-group">
+          <label for="promptNewPassword">New Password</label>
+          <input type="password" id="promptNewPassword" class="form-input" placeholder="Minimum 4 characters" required minlength="4" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label for="promptConfirmPassword">Confirm New Password</label>
+          <input type="password" id="promptConfirmPassword" class="form-input" placeholder="Repeat new password" required minlength="4" autocomplete="new-password">
+        </div>
+        <div class="error-msg hidden" id="changePasswordErrorMsg"></div>
+        <div style="display: flex; gap: 10px; margin-top: 8px;">
+          <button type="submit" class="btn btn-primary btn-full" id="submitChangePasswordBtn">Save New Password</button>
+          <button type="button" class="btn btn-secondary hidden" id="skipPasswordBtn">Skip for Now</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin Reset Password Modal -->
+  <div class="modal-overlay hidden" id="adminResetPasswordModal">
+    <div class="modal-content auth-modal card">
+      <div class="modal-header">
+        <div>
+          <h3 id="adminResetPasswordTitle">🔑 Change User Password</h3>
+          <p class="auth-subtitle" id="adminResetPasswordSubtitle">Set a new password for this user</p>
+        </div>
+        <button class="modal-close" id="closeAdminResetPasswordBtn">&times;</button>
+      </div>
+      <form id="adminResetPasswordForm" class="auth-form">
+        <div class="form-group">
+          <label for="adminNewUserPassword">New Password</label>
+          <input type="password" id="adminNewUserPassword" class="form-input" placeholder="Minimum 4 characters" required minlength="4" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label class="checkbox-item" style="cursor: pointer; margin-top: 4px;">
+            <input type="checkbox" id="adminRequireChangeCheckbox" checked>
+            <span>Require user to change password on next login</span>
+          </label>
+        </div>
+        <div class="error-msg hidden" id="adminResetPasswordErrorMsg"></div>
+        <div style="display: flex; gap: 10px; margin-top: 8px;">
+          <button type="submit" class="btn btn-primary btn-full">Update Password</button>
+          <button type="button" class="btn btn-secondary" id="cancelAdminResetPasswordBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Video Streaming Modal -->
   <div class="modal-overlay hidden" id="videoModal">
     <div class="modal-content card">

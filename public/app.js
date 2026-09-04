@@ -79,6 +79,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelPermissionBtn = document.getElementById('cancelPermissionBtn');
   const closePermissionModalBtn = document.getElementById('closePermissionModalBtn');
 
+  // Elements - Change Password Prompt Modal (First-Login)
+  const changePasswordModal = document.getElementById('changePasswordModal');
+  const changePasswordModalTitle = document.getElementById('changePasswordModalTitle');
+  const changePasswordModalSubtitle = document.getElementById('changePasswordModalSubtitle');
+  const closeChangePasswordModalBtn = document.getElementById('closeChangePasswordModalBtn');
+  const changePasswordForm = document.getElementById('changePasswordForm');
+  const promptNewPassword = document.getElementById('promptNewPassword');
+  const promptConfirmPassword = document.getElementById('promptConfirmPassword');
+  const changePasswordErrorMsg = document.getElementById('changePasswordErrorMsg');
+  const skipPasswordBtn = document.getElementById('skipPasswordBtn');
+
+  // Elements - Admin Reset Password Modal
+  const adminResetPasswordModal = document.getElementById('adminResetPasswordModal');
+  const adminResetPasswordTitle = document.getElementById('adminResetPasswordTitle');
+  const closeAdminResetPasswordBtn = document.getElementById('closeAdminResetPasswordBtn');
+  const adminResetPasswordForm = document.getElementById('adminResetPasswordForm');
+  const adminNewUserPassword = document.getElementById('adminNewUserPassword');
+  const adminRequireChangeCheckbox = document.getElementById('adminRequireChangeCheckbox');
+  const adminResetPasswordErrorMsg = document.getElementById('adminResetPasswordErrorMsg');
+  const cancelAdminResetPasswordBtn = document.getElementById('cancelAdminResetPasswordBtn');
+
+  let adminResetTargetUserId = null;
+  let adminResetTargetUsername = null;
+
   let adminUsersCache = [];
   let permissionContext = { type: null, targetId: null, targetName: null };
 
@@ -146,6 +170,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     populateFolderSelectors();
     loadFiles();
+
+    // Check if user is required or recommended to change their password
+    if (user.mustChangePassword) {
+      promptChangePassword(user);
+    }
   }
 
   // Login form handler
@@ -564,11 +593,21 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Folder Access: ${foldersHtml}</div>
           </div>
           <div class="user-row-actions">
-            ${u.role !== 'admin' ? `<button class="btn btn-sm btn-secondary edit-access-btn" data-id="${u.id}" data-username="${escapeHtml(u.username)}">🔑 Edit Access</button>` : ''}
+            ${u.role !== 'admin' ? `<button class="btn btn-sm btn-secondary edit-access-btn" data-id="${u.id}" data-username="${escapeHtml(u.username)}">📁 Access</button>` : ''}
+            <button class="btn btn-sm btn-secondary reset-user-pass-btn" data-id="${u.id}" data-username="${escapeHtml(u.username)}" title="Reset password for this user">🔑 Password</button>
             ${u.username !== 'admin' ? `<button class="btn btn-sm btn-danger delete-user-btn" data-id="${u.id}">Delete</button>` : '<span class="folder-note">Protected</span>'}
           </div>
         `;
         adminUsersList.appendChild(row);
+      });
+
+      // Reset user password by Admin
+      document.querySelectorAll('.reset-user-pass-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const userId = e.currentTarget.getAttribute('data-id');
+          const username = e.currentTarget.getAttribute('data-username');
+          openAdminResetPasswordModal(userId, username);
+        });
       });
 
       // Edit user folder access
@@ -876,6 +915,142 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       alert(`Error creating folder: ${err.message}`);
     }
+  });
+
+  // ==========================================
+  // PASSWORD MANAGEMENT & PROMPTS
+  // ==========================================
+  function promptChangePassword(user) {
+    changePasswordErrorMsg.classList.add('hidden');
+    changePasswordErrorMsg.textContent = '';
+    promptNewPassword.value = '';
+    promptConfirmPassword.value = '';
+
+    if (user.role === 'admin') {
+      changePasswordModalTitle.textContent = '🔒 Mandatory: Set New Admin Password';
+      changePasswordModalSubtitle.textContent = 'For security, you must change the default administrator password before accessing the system.';
+      closeChangePasswordModalBtn.classList.add('hidden');
+      skipPasswordBtn.classList.add('hidden');
+    } else {
+      changePasswordModalTitle.textContent = '🔒 Recommended: Set a Personal Password';
+      changePasswordModalSubtitle.textContent = 'You are logged in with an initial password. Would you like to set your own password?';
+      closeChangePasswordModalBtn.classList.remove('hidden');
+      skipPasswordBtn.classList.remove('hidden');
+    }
+
+    changePasswordModal.classList.remove('hidden');
+    promptNewPassword.focus();
+  }
+
+  // Handle self password change submission
+  changePasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    changePasswordErrorMsg.classList.add('hidden');
+
+    const newPass = promptNewPassword.value;
+    const confirmPass = promptConfirmPassword.value;
+
+    if (newPass !== confirmPass) {
+      changePasswordErrorMsg.textContent = 'Passwords do not match.';
+      changePasswordErrorMsg.classList.remove('hidden');
+      return;
+    }
+
+    if (newPass.length < 4) {
+      changePasswordErrorMsg.textContent = 'Password must be at least 4 characters.';
+      changePasswordErrorMsg.classList.remove('hidden');
+      return;
+    }
+
+    try {
+      const res = await authFetch('/api/auth/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword: newPass }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update password');
+
+      if (currentUser) currentUser.mustChangePassword = false;
+      changePasswordModal.classList.add('hidden');
+      alert('✅ Your password has been updated successfully!');
+    } catch (err) {
+      changePasswordErrorMsg.textContent = err.message;
+      changePasswordErrorMsg.classList.remove('hidden');
+    }
+  });
+
+  // Handle regular user skipping password change
+  skipPasswordBtn.addEventListener('click', async () => {
+    try {
+      await authFetch('/api/auth/skip-password-change', { method: 'POST' });
+      if (currentUser) currentUser.mustChangePassword = false;
+      changePasswordModal.classList.add('hidden');
+    } catch (err) {
+      alert(`Could not skip: ${err.message}`);
+    }
+  });
+
+  closeChangePasswordModalBtn.addEventListener('click', () => {
+    if (currentUser && currentUser.role !== 'admin') {
+      changePasswordModal.classList.add('hidden');
+    }
+  });
+
+  // Admin Reset Password Modal
+  function openAdminResetPasswordModal(userId, username) {
+    adminResetTargetUserId = userId;
+    adminResetTargetUsername = username;
+    adminResetPasswordTitle.textContent = `🔑 Change Password for @${username}`;
+    adminResetPasswordSubtitle.textContent = `Set a new password for @${username}:`;
+    adminNewUserPassword.value = '';
+    adminRequireChangeCheckbox.checked = true;
+    adminResetPasswordErrorMsg.classList.add('hidden');
+
+    adminResetPasswordModal.classList.remove('hidden');
+    adminNewUserPassword.focus();
+  }
+
+  adminResetPasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    adminResetPasswordErrorMsg.classList.add('hidden');
+
+    const newPass = adminNewUserPassword.value;
+    const requireChange = adminRequireChangeCheckbox.checked;
+
+    if (!newPass || newPass.length < 4) {
+      adminResetPasswordErrorMsg.textContent = 'Password must be at least 4 characters.';
+      adminResetPasswordErrorMsg.classList.remove('hidden');
+      return;
+    }
+
+    try {
+      const res = await authFetch(`/api/admin/users/${adminResetTargetUserId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password: newPass,
+          mustChangePassword: requireChange,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update user password');
+
+      adminResetPasswordModal.classList.add('hidden');
+      alert(`✅ Password updated for user @${adminResetTargetUsername}!`);
+      loadAdminUsers();
+    } catch (err) {
+      adminResetPasswordErrorMsg.textContent = err.message;
+      adminResetPasswordErrorMsg.classList.remove('hidden');
+    }
+  });
+
+  closeAdminResetPasswordBtn.addEventListener('click', () => {
+    adminResetPasswordModal.classList.add('hidden');
+  });
+
+  cancelAdminResetPasswordBtn.addEventListener('click', () => {
+    adminResetPasswordModal.classList.add('hidden');
   });
 
   // Utilities
