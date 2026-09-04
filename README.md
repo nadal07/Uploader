@@ -1,34 +1,35 @@
-# Cloudflare Tunnel Large File Uploader & Streamer
+# VaultStream — Enterprise Chunked File Uploader & Media Server
 
-A resilient, resumable chunked upload and byte-range streaming solution designed specifically for self-hosted applications running behind **Cloudflare Tunnel**.
+VaultStream is a high-performance, resilient, resumable chunked upload and HTTP 206 byte-range streaming solution designed for self-hosted infrastructure, NAS systems, and reverse proxies.
 
-Bypass Cloudflare's **100MB/300MB HTTP payload limits** to upload multi-gigabyte files (videos, ISOs, archives) effortlessly, with **role-based user authentication**, **direct storage into actual host/server system folders**, directory scanning, and **HTTP 206 Partial Content (Byte Range Requests)** video streaming.
+It features **role-based access control**, **direct storage into real host/server system directories**, **instant directory indexing**, and **seamless HTML5 video playback** with seeking.
 
 ---
 
-## ⚡ The Problem Solved
+## ⚡ Key Highlights & Capabilities
 
-When self-hosting an application and exposing it via Cloudflare Tunnel:
-1. **Upload Size Restriction**: Cloudflare limits individual HTTP request payloads to **100MB** on Free/Pro plans (and up to 300MB on Business/Enterprise). Direct file uploads exceeding this limit fail with `413 Payload Too Large`.
-2. **Video Streaming Timeouts**: Monolithic downloads of large video files trigger Cloudflare buffer timeouts and high memory usage.
-3. **Actual System Directory Organization**: Need uploaded files to land directly inside **real folders on your server / NAS filesystem** (e.g. `/mnt/storage/movies`, `/media/videos`, `/data/backups`) so they are immediately accessible to other server tools (Plex, Jellyfin, local file browsers), while letting admins decide which users can upload to which actual system folders.
-
-### How This Solution Solves It
-- **Client-Side Slicing**: Files are sliced in the browser into **10MB chunks** (customizable from 5MB to 50MB). Each chunk is an independent HTTP request comfortably below Cloudflare's limit.
-- **Actual Physical System Folders**: Admins map folders to real filesystem paths anywhere on the server. Uploads are assembled directly into that directory with clean filenames.
-- **Automatic Directory Scanning**: Discovers and indexes existing files already present in the target system folder, allowing instant streaming and downloading.
-- **Role-Based Authentication**: Secure JWT token authentication with memory-hard `scrypt` password hashing.
-- **Admin-Controlled Folder Permissions**: Admins grant specific users access to specific actual system folders. Users select their destination folder before uploading.
-- **Resumable & Fault Tolerant**: Chunk states are tracked on both client (`localStorage`) and server. Network drops or browser refreshes automatically resume from the last verified chunk.
-- **Byte-Range Video Streaming (HTTP 206)**: Serves video files with `Range: bytes=start-end` support directly from their actual system path, enabling HTML5 players to seek forward/backward instantly with token security.
+- **Resumable Chunked Transfers**: Client-side slicing divides multi-gigabyte files (videos, ISOs, raw datasets) into lightweight, independent HTTP chunk requests. Network drops or page refreshes automatically resume from the last completed chunk.
+- **🛡️ Cloudflare Tunnel & Proxy Limit Bypass**:
+  > [!TIP]
+  > **Effortlessly Bypass Cloudflare 100MB/300MB Payload Limits**
+  > 
+  > Self-hosted servers exposed through **Cloudflare Tunnel** normally reject any upload exceeding Cloudflare's HTTP request body ceiling (**100MB** on Free/Pro plans, **300MB** on Business/Enterprise) with `413 Payload Too Large`.
+  > 
+  > VaultStream breaks transfers into **10MB chunks** (configurable from 5MB to 50MB), completely bypassing Cloudflare Tunnel's payload restrictions and connection timeout limits. This also eliminates upload failures behind Nginx `client_max_body_size`, Traefik, Caddy, or unstable mobile connections.
+- **Physical Server System Folders**: Mapped directly to real filesystem paths anywhere on your host (e.g. `/mnt/storage/movies`, `/media/videos`, `/data/backups`). Uploaded files land with clean filenames, immediately accessible to Plex, Jellyfin, or local file explorers.
+- **Automatic Directory Scanning**: Index and stream existing files already sitting on disk with one click.
+- **Dual Light & Dark Themes**: Fully integrated theme engine with automatic OS detection (`prefers-color-scheme`) and persistent instant toggle.
+- **Granular Folder Permissions**: Admins assign specific users to specific physical system folders. Users can only see and upload to folders explicitly granted to them.
+- **First-Login Password Policy**: Mandatory password change for default administrators, optional with skip for regular users, plus on-demand admin password resets.
+- **Byte-Range Media Streaming (HTTP 206)**: Streams video files with `Range: bytes=start-end` support directly from their actual system path, enabling instantaneous seeking without buffering full video files.
 
 ---
 
 ## 🚀 Key Features
 
-- **Multi-Gigabyte Uploads**: Upload 1GB, 5GB, 10GB+ files over Cloudflare Tunnel without hitting payload errors.
+- **Multi-Gigabyte Transfers**: Upload 1GB, 5GB, 20GB+ files reliably without hitting proxy timeouts or payload limits.
 - **Actual System Folders**:
-  - Save files directly into any real server directory (`/mnt/media`, `/var/data`, `./storage/movies`).
+  - Store files directly into any real server directory (`/mnt/media`, `/var/data`, `./storage/movies`).
   - Scan existing files on disk with the click of a button.
 - **User Authentication & Roles**:
   - `Admin`: Full access, manages users, folder mappings, and resets user passwords.
@@ -38,8 +39,9 @@ When self-hosting an application and exposing it via Cloudflare Tunnel:
   - **Optional User Change**: New users are prompted to set a personal password upon first login, but can opt out using "Skip for Now".
   - **Admin Password Reset**: Admins can reset the password for any user at any time and optionally re-enable the next-login password prompt.
 - **Destination Folder Selection**: Users choose which actual system folder to upload into.
-- **Live Chunk Matrix Visualizer**: Real-time dashboard showing every chunk's state (`Done`, `Uploading`, `Pending`, `Retry`).
-- **Instant Video Playback**: Built-in video player with live HTTP 206 Byte-Range debugging.
+- **Live Transfer Matrix**: Real-time dashboard showing every chunk's state (`Done`, `Uploading`, `Pending`, `Retry`).
+- **Instant Video Playback**: Built-in video player with live HTTP 206 Byte-Range streaming monitor.
+- **Light & Dark Mode**: Professional UI with instant theme toggle and smooth transitions.
 - **Docker & Compose Ready**: Host volume mounts mapping real server folders into the container.
 
 ---
@@ -53,7 +55,7 @@ On first run, the server automatically bootstraps an administrator account:
 ### First Login Flow
 1. **Admin**: When `admin` logs in for the first time, a **mandatory modal** appears requiring a new secure password. Navigation and skipping are blocked until a new password is saved.
 2. **Users**: When created, users are prompted on first login with an option to change their password or **Skip for Now**.
-3. **Admin Resets**: In the Admin Console under the **Users & Permissions** tab, click **🔑 Password** next to any user to assign a new password immediately.
+3. **Admin Resets**: In the Admin Console under the **Users & Permissions** tab, click **Password** next to any user to assign a new password immediately.
 
 ---
 
@@ -72,8 +74,8 @@ On first run, the server automatically bootstraps an administrator account:
 │   └── uploader-server.js      # Express router for chunk merging & range streaming
 ├── public/
 │   ├── index.html              # Dashboard UI with login & admin console modals
-│   ├── style.css               # Modern dark theme styles
-│   └── app.js                  # Frontend controller
+│   ├── style.css               # Modern dual light/dark theme styles
+│   └── app.js                  # Frontend controller & theme engine
 └── scripts/
     └── test-uploader.js        # Automated verification test suite
 ```

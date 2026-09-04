@@ -12,6 +12,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const adminConsoleBtn = document.getElementById('adminConsoleBtn');
   const logoutBtn = document.getElementById('logoutBtn');
 
+  // Elements - Theme Toggle
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  const sunIcon = themeToggleBtn ? themeToggleBtn.querySelector('.sun-icon') : null;
+  const moonIcon = themeToggleBtn ? themeToggleBtn.querySelector('.moon-icon') : null;
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('vaultstream_theme', theme);
+    if (sunIcon && moonIcon) {
+      if (theme === 'light') {
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+      } else {
+        sunIcon.classList.remove('hidden');
+        moonIcon.classList.add('hidden');
+      }
+    }
+  }
+
+  // Detect stored or system theme
+  const savedTheme = localStorage.getItem('vaultstream_theme');
+  if (savedTheme) {
+    applyTheme(savedTheme);
+  } else {
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(prefersDark ? 'dark' : 'light');
+  }
+
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+      applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+    });
+  }
+
   // Elements - Login Modal
   const loginModal = document.getElementById('loginModal');
   const loginForm = document.getElementById('loginForm');
@@ -237,14 +272,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // Upload folder select
       const opt = document.createElement('option');
       opt.value = f.id;
-      opt.textContent = `📁 ${f.name} (${f.description || f.folderPath})`;
+      opt.textContent = `${f.name} (${f.description || f.folderPath})`;
       if (index === 0) opt.selected = true;
       targetFolderSelect.appendChild(opt);
 
       // Gallery filter select
       const filterOpt = document.createElement('option');
       filterOpt.value = f.id;
-      filterOpt.textContent = `📁 ${f.name}`;
+      filterOpt.textContent = f.name;
       folderFilterSelect.appendChild(filterOpt);
     });
   }
@@ -294,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleSelectedFile(file) {
     const selectedFolderId = targetFolderSelect.value;
     if (!selectedFolderId) {
-      alert('⚠️ Please select an authorized destination folder first.');
+      alert('Please select an authorized destination folder first.');
       return;
     }
 
@@ -315,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup visual UI elements
     uploadFileName.textContent = file.name;
     uploadFileSize.textContent = formatBytes(file.size);
-    uploadFolderBadge.textContent = `📁 ${folderName}`;
+    uploadFolderBadge.textContent = folderName;
     activeUploadContainer.classList.remove('hidden');
     pauseBtn.classList.remove('hidden');
     resumeBtn.classList.add('hidden');
@@ -422,7 +457,14 @@ document.addEventListener('DOMContentLoaded', () => {
         fileCard.className = 'file-item';
 
         const isVideo = file.mimeType.startsWith('video/');
-        const icon = isVideo ? '🎬' : file.mimeType.startsWith('audio/') ? '🎵' : '📄';
+        const isAudio = file.mimeType.startsWith('audio/');
+        const fileIconSvg = isVideo
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`
+          : isAudio
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+
+        const folderIconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
         const folderName = file.folderName || 'General';
         const uploaderName = file.uploadedBy ? file.uploadedBy.username : 'Unknown';
 
@@ -432,11 +474,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         fileCard.innerHTML = `
           <div class="file-item-left">
-            <span class="file-icon">${icon}</span>
+            <span class="file-icon">${fileIconSvg}</span>
             <div class="file-details">
               <h4>${escapeHtml(file.originalName)}</h4>
               <p>
-                <span class="file-tag">📁 ${escapeHtml(folderName)}</span>
+                <span class="file-tag">${folderIconSvg} ${escapeHtml(folderName)}</span>
                 <span>${formatBytes(file.size)}</span>
                 <span class="uploader-tag">by @${escapeHtml(uploaderName)}</span>
                 <span>• ${new Date(file.uploadedAt).toLocaleString()}</span>
@@ -444,10 +486,22 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </div>
           <div class="file-item-actions">
-            ${isVideo ? `<button class="btn btn-sm btn-primary play-btn" data-url="${authenticatedStreamUrl}" data-title="${escapeHtml(file.originalName)}">Stream</button>` : ''}
-            <a href="${authenticatedDownloadUrl}" class="btn btn-sm btn-secondary" download>Download</a>
-            <button class="btn btn-sm btn-secondary copy-btn" data-url="${window.location.origin}${authenticatedStreamUrl}">Copy Link</button>
-            <button class="btn btn-sm btn-danger delete-btn" data-id="${file.fileId}">Delete</button>
+            ${isVideo ? `<button class="btn btn-sm btn-primary play-btn" data-url="${authenticatedStreamUrl}" data-title="${escapeHtml(file.originalName)}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              Stream
+            </button>` : ''}
+            <a href="${authenticatedDownloadUrl}" class="btn btn-sm btn-secondary" download>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Download
+            </a>
+            <button class="btn btn-sm btn-secondary copy-btn" data-url="${window.location.origin}${authenticatedStreamUrl}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy Link
+            </button>
+            <button class="btn btn-sm btn-danger delete-btn" data-id="${file.fileId}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              Delete
+            </button>
           </div>
         `;
         fileGrid.appendChild(fileCard);
@@ -579,12 +633,12 @@ document.addEventListener('DOMContentLoaded', () => {
           const tags = u.allowedFolderIds
             .map((id) => {
               const f = accessibleFolders.find((folder) => folder.id === id);
-              return `<span class="file-tag">📁 ${escapeHtml(f ? f.name : id)}</span>`;
+              return `<span class="file-tag">${escapeHtml(f ? f.name : id)}</span>`;
             })
             .join(' ');
           foldersHtml = `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">${tags}</div>`;
         } else {
-          foldersHtml = '<span class="folder-note" style="color:#f87171;">⚠️ No folders assigned</span>';
+          foldersHtml = '<span class="folder-note" style="color:var(--danger);">No folders assigned</span>';
         }
 
         row.innerHTML = `
@@ -593,8 +647,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Folder Access: ${foldersHtml}</div>
           </div>
           <div class="user-row-actions">
-            ${u.role !== 'admin' ? `<button class="btn btn-sm btn-secondary edit-access-btn" data-id="${u.id}" data-username="${escapeHtml(u.username)}">📁 Access</button>` : ''}
-            <button class="btn btn-sm btn-secondary reset-user-pass-btn" data-id="${u.id}" data-username="${escapeHtml(u.username)}" title="Reset password for this user">🔑 Password</button>
+            ${u.role !== 'admin' ? `<button class="btn btn-sm btn-secondary edit-access-btn" data-id="${u.id}" data-username="${escapeHtml(u.username)}">Access</button>` : ''}
+            <button class="btn btn-sm btn-secondary reset-user-pass-btn" data-id="${u.id}" data-username="${escapeHtml(u.username)}" title="Reset password for this user">Password</button>
             ${u.username !== 'admin' ? `<button class="btn btn-sm btn-danger delete-user-btn" data-id="${u.id}">Delete</button>` : '<span class="folder-note">Protected</span>'}
           </div>
         `;
@@ -667,13 +721,13 @@ document.addEventListener('DOMContentLoaded', () => {
         row.className = 'folder-row';
         row.innerHTML = `
           <div class="folder-row-meta">
-            <h5>📁 ${escapeHtml(f.name)}</h5>
+            <h5>${escapeHtml(f.name)}</h5>
             <p><code>${escapeHtml(f.systemPath || f.folderPath)}</code></p>
-            <p style="margin-top:2px;"><strong>👥 Users:</strong> ${usersSummary}</p>
+            <p style="margin-top:2px;"><strong>Users:</strong> ${usersSummary}</p>
           </div>
           <div class="folder-row-actions">
-            <button class="btn btn-sm btn-secondary manage-folder-users-btn" data-id="${f.id}" data-name="${escapeHtml(f.name)}" title="Manage which users can access this folder">👥 Access</button>
-            <button class="btn btn-sm btn-secondary scan-folder-btn" data-id="${f.id}" title="Scan for files already on disk">🔍 Scan</button>
+            <button class="btn btn-sm btn-secondary manage-folder-users-btn" data-id="${f.id}" data-name="${escapeHtml(f.name)}" title="Manage which users can access this folder">Access</button>
+            <button class="btn btn-sm btn-secondary scan-folder-btn" data-id="${f.id}" title="Scan for files already on disk">Scan</button>
             ${f.id !== 'f_general' ? `<button class="btn btn-sm btn-danger delete-folder-btn" data-id="${f.id}">Delete</button>` : ''}
           </div>
         `;
@@ -684,7 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
         label.className = 'checkbox-item';
         label.innerHTML = `
           <input type="checkbox" name="allowedFolders" value="${f.id}">
-          <span>📁 ${escapeHtml(f.name)}</span>
+          <span>${escapeHtml(f.name)}</span>
         `;
         allowedFoldersCheckboxList.appendChild(label);
       });
@@ -708,7 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await authFetch(`/api/folders/${folderId}/scan`, { method: 'POST' });
             const data = await res.json();
             if (res.ok) {
-              alert(`🔍 Scan Complete: ${data.totalFound} items found on disk, ${data.newlyDiscovered} newly indexed!`);
+              alert(`Scan Complete: ${data.totalFound} items found on disk, ${data.newlyDiscovered} newly indexed.`);
               loadFiles();
             } else {
               alert(data.error || 'Scan failed');
@@ -717,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(`Scan error: ${err.message}`);
           } finally {
             btn.disabled = false;
-            btn.textContent = '🔍 Scan';
+            btn.textContent = 'Scan';
           }
         });
       });
@@ -749,7 +803,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   function openUserPermissionsModal(userId, username) {
     permissionContext = { type: 'user', targetId: userId, targetName: username };
-    permissionModalTitle.textContent = `🔑 Folder Access for @${username}`;
+    permissionModalTitle.textContent = `Folder Access for @${username}`;
     permissionModalSubtitle.textContent = `Select which folders @${username} can view and upload to:`;
 
     const targetUser = adminUsersCache.find((u) => u.id === userId);
@@ -767,7 +821,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isChecked = userFolderSet.has(f.id);
         label.innerHTML = `
           <input type="checkbox" name="permItem" value="${f.id}" ${isChecked ? 'checked' : ''}>
-          <span>📁 <strong>${escapeHtml(f.name)}</strong> <small style="color:var(--text-muted); font-size:0.75rem;">(${escapeHtml(f.systemPath || f.folderPath)})</small></span>
+          <span><strong>${escapeHtml(f.name)}</strong> <small style="color:var(--text-muted); font-size:0.75rem;">(${escapeHtml(f.systemPath || f.folderPath)})</small></span>
         `;
         permissionCheckboxesList.appendChild(label);
       });
@@ -778,7 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function openFolderPermissionsModal(folderId, folderName) {
     permissionContext = { type: 'folder', targetId: folderId, targetName: folderName };
-    permissionModalTitle.textContent = `👥 User Access for "${folderName}"`;
+    permissionModalTitle.textContent = `User Access for "${folderName}"`;
     permissionModalSubtitle.textContent = `Select which users can view and upload to this folder:`;
 
     const regularUsers = adminUsersCache.filter((u) => u.role !== 'admin');
@@ -795,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const hasAccess = u.allowedFolderIds && u.allowedFolderIds.includes(folderId);
         label.innerHTML = `
           <input type="checkbox" name="permItem" value="${u.id}" ${hasAccess ? 'checked' : ''}>
-          <span>👤 <strong>@${escapeHtml(u.username)}</strong></span>
+          <span><strong>@${escapeHtml(u.username)}</strong></span>
         `;
         permissionCheckboxesList.appendChild(label);
       });
@@ -824,7 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to update user permissions');
 
-        alert(`✅ Folder access updated for @${permissionContext.targetName}!`);
+        alert(`Folder access updated for @${permissionContext.targetName}.`);
       } else if (permissionContext.type === 'folder') {
         const res = await authFetch(`/api/folders/${permissionContext.targetId}/users`, {
           method: 'PUT',
@@ -834,7 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to update folder access');
 
-        alert(`✅ User permissions updated for "${permissionContext.targetName}"!`);
+        alert(`User permissions updated for "${permissionContext.targetName}".`);
       }
 
       permissionModal.classList.add('hidden');
@@ -884,7 +938,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create user');
 
-      alert(`✅ User "@${username}" created successfully!`);
+      alert(`User "@${username}" created successfully.`);
       createUserForm.reset();
       loadAdminUsers();
     } catch (err) {
@@ -909,7 +963,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create folder');
 
-      alert(`✅ System Folder "${name}" created!\nPath: ${data.folder.systemPath}`);
+      alert(`System Folder "${name}" created.\nPath: ${data.folder.systemPath}`);
       createFolderForm.reset();
       loadAdminFolders();
     } catch (err) {
@@ -973,7 +1027,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (currentUser) currentUser.mustChangePassword = false;
       changePasswordModal.classList.add('hidden');
-      alert('✅ Your password has been updated successfully!');
+      alert('Your password has been updated successfully.');
     } catch (err) {
       changePasswordErrorMsg.textContent = err.message;
       changePasswordErrorMsg.classList.remove('hidden');
@@ -1037,7 +1091,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!res.ok) throw new Error(data.error || 'Failed to update user password');
 
       adminResetPasswordModal.classList.add('hidden');
-      alert(`✅ Password updated for user @${adminResetTargetUsername}!`);
+      alert(`Password updated for user @${adminResetTargetUsername}.`);
       loadAdminUsers();
     } catch (err) {
       adminResetPasswordErrorMsg.textContent = err.message;

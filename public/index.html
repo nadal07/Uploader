@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cloudflare Tunnel Large File Uploader & Streamer</title>
+  <title>VaultStream — Enterprise File Transfer & Media Server</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,26 +14,75 @@
     <!-- Header -->
     <header class="app-header">
       <div class="logo-area">
-        <div class="logo-icon">⚡</div>
-        <div>
-          <h1>Cloudflare Tunnel Uploader</h1>
-          <p class="subtitle">Resumable Chunking, Folder Access Control & Byte-Range Video Streaming</p>
+        <div class="logo-icon">
+          <!-- Geometric VaultStream Logo -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <h1>VaultStream</h1>
+          <p class="subtitle">High-Performance Resumable Transfer & Byte-Range Media Streaming</p>
         </div>
       </div>
       <div class="header-right">
+        <!-- Engine Status Badge -->
         <div class="status-badge" id="tunnelStatusBadge">
           <span class="pulse-dot"></span>
-          <span class="status-text">Cloudflare Ready (10MB)</span>
+          <span class="status-text">Engine Online (10MB Chunks)</span>
         </div>
+
+        <!-- Theme Toggle Button -->
+        <button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Light / Dark Mode" aria-label="Toggle theme">
+          <!-- Sun Icon (for switching to Light mode) -->
+          <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <!-- Moon Icon (for switching to Dark mode) -->
+          <svg class="theme-icon moon-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
         <!-- User Profile Area -->
         <div class="user-profile-area hidden" id="userProfileArea">
           <div class="user-info-pill">
-            <span class="user-avatar">👤</span>
+            <span class="user-avatar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </span>
             <span class="user-name" id="currentUsername">User</span>
             <span class="role-badge" id="currentUserRole">user</span>
           </div>
-          <button class="btn btn-sm btn-secondary hidden" id="adminConsoleBtn">🛠️ Admin Console</button>
-          <button class="btn btn-sm btn-danger" id="logoutBtn">Logout</button>
+          <button class="btn btn-sm btn-secondary hidden" id="adminConsoleBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            Admin Console
+          </button>
+          <button class="btn btn-sm btn-danger" id="logoutBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Logout
+          </button>
         </div>
       </div>
     </header>
@@ -43,15 +92,33 @@
       <!-- Left Column: Upload Controls & Active Upload -->
       <section class="upload-section card">
         <div class="card-header">
-          <h2>📤 Large File Uploader</h2>
-          <div class="config-toggle" id="configToggleBtn">⚙️ Settings</div>
+          <div class="card-title-group">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <h2>Resumable File Uploader</h2>
+          </div>
+          <div class="config-toggle" id="configToggleBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            Settings
+          </div>
         </div>
 
         <!-- Target Folder Selector -->
         <div class="folder-selector-box">
           <label for="targetFolderSelect" class="folder-label">
-            <span>📁 Destination Folder:</span>
-            <span class="folder-note">(Admin granted access)</span>
+            <span class="folder-label-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Destination System Folder:
+            </span>
+            <span class="folder-note">Authorized system directory</span>
           </label>
           <select id="targetFolderSelect" class="styled-select">
             <option value="" disabled selected>Loading accessible folders...</option>
@@ -61,16 +128,16 @@
         <!-- Settings Drawer -->
         <div class="settings-drawer hidden" id="settingsDrawer">
           <div class="setting-row">
-            <label for="chunkSizeSelect">Chunk Size (Cloudflare Limit Bypass):</label>
+            <label for="chunkSizeSelect">Transfer Chunk Size:</label>
             <select id="chunkSizeSelect">
               <option value="5242880">5 MB (Strict Networks)</option>
-              <option value="10485760" selected>10 MB (Recommended for Cloudflare)</option>
-              <option value="20971520">20 MB (Fast Connections)</option>
-              <option value="52428800">50 MB (High Speed)</option>
+              <option value="10485760" selected>10 MB (Recommended)</option>
+              <option value="20971520">20 MB (High Throughput)</option>
+              <option value="52428800">50 MB (Gigabit LAN)</option>
             </select>
           </div>
           <div class="setting-row">
-            <label for="concurrencySelect">Parallel Upload Workers:</label>
+            <label for="concurrencySelect">Parallel Transfer Workers:</label>
             <select id="concurrencySelect">
               <option value="1">1 Worker (Sequential)</option>
               <option value="2" selected>2 Workers (Balanced)</option>
@@ -84,10 +151,22 @@
         <div class="drop-zone" id="dropZone">
           <input type="file" id="fileInput" class="file-input">
           <div class="drop-zone-content">
-            <div class="cloud-upload-icon">☁️</div>
-            <h3>Drag & Drop Large Files Here</h3>
-            <p>Videos (MP4, MKV, MOV), ISOs, ZIPs up to multi-gigabytes</p>
-            <button type="button" class="btn btn-primary" id="browseBtn">Browse File</button>
+            <div class="cloud-upload-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 16 12 12 8 16"></polyline>
+                <line x1="12" y1="12" x2="12" y2="21"></line>
+                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+                <polyline points="16 16 12 12 8 16"></polyline>
+              </svg>
+            </div>
+            <h3>Drag & Drop Files Here</h3>
+            <p>Upload multi-gigabyte files (MP4, MKV, MOV, ISO, ZIP, raw datasets)</p>
+            <button type="button" class="btn btn-primary" id="browseBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Browse Local File
+            </button>
           </div>
         </div>
 
@@ -97,7 +176,7 @@
             <div class="file-meta">
               <span class="file-name" id="uploadFileName">filename.mp4</span>
               <span class="file-size-badge" id="uploadFileSize">0 MB</span>
-              <span class="folder-badge" id="uploadFolderBadge">📁 General</span>
+              <span class="folder-badge" id="uploadFolderBadge">General</span>
             </div>
             <div class="upload-actions">
               <button class="btn btn-sm btn-secondary" id="pauseBtn">Pause</button>
@@ -113,15 +192,15 @@
 
           <!-- Speed & ETA Stats -->
           <div class="stats-row">
-            <div><span class="stat-label">Progress:</span> <span id="statPercent">0%</span></div>
-            <div><span class="stat-label">Speed:</span> <span id="statSpeed">0 MB/s</span></div>
-            <div><span class="stat-label">ETA:</span> <span id="statEta">--</span></div>
-            <div><span class="stat-label">Chunks:</span> <span id="statChunks">0 / 0</span></div>
+            <div><span class="stat-label">Progress</span><span id="statPercent">0%</span></div>
+            <div><span class="stat-label">Transfer Rate</span><span id="statSpeed">0 MB/s</span></div>
+            <div><span class="stat-label">Estimated ETA</span><span id="statEta">--</span></div>
+            <div><span class="stat-label">Chunks Completed</span><span id="statChunks">0 / 0</span></div>
           </div>
 
           <!-- Realtime Chunk Visualizer Grid -->
           <div class="chunk-visualizer-section">
-            <h4>Live Chunk Matrix (Each box = 1 HTTP Request)</h4>
+            <h4>Live Transfer Matrix (1 Segment = 1 Independent Chunk)</h4>
             <div class="chunk-grid" id="chunkGrid"></div>
             <div class="chunk-legend">
               <span class="legend-item"><span class="box done"></span> Done</span>
@@ -136,18 +215,32 @@
       <!-- Right Column: Storage & File Gallery -->
       <section class="gallery-section card">
         <div class="card-header">
-          <h2>📂 Server Files & Streams</h2>
+          <div class="card-title-group">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+            </svg>
+            <h2>System Storage & Media Streams</h2>
+          </div>
           <div class="gallery-header-actions">
             <select id="folderFilterSelect" class="styled-select-sm">
               <option value="ALL">All Folders</option>
             </select>
-            <button class="btn btn-sm btn-secondary" id="refreshFilesBtn">🔄 Refresh</button>
+            <button class="btn btn-sm btn-secondary" id="refreshFilesBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              </svg>
+              Refresh
+            </button>
           </div>
         </div>
 
         <div class="file-list-container" id="fileListContainer">
           <div class="empty-state" id="emptyState">
-            <div class="empty-icon">📁</div>
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+              </svg>
+            </div>
             <p>No files found in selected folder. Upload a file to test!</p>
           </div>
           <div class="file-grid" id="fileGrid"></div>
@@ -161,10 +254,15 @@
     <div class="modal-content auth-modal card">
       <div class="modal-header">
         <div class="auth-header-title">
-          <span class="auth-icon">🔐</span>
+          <span class="auth-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </span>
           <div>
-            <h3>Sign In to Uploader</h3>
-            <p class="auth-subtitle">Access authorized folders and Cloudflare stream services</p>
+            <h3>Sign In to VaultStream</h3>
+            <p class="auth-subtitle">Access authorized system folders and media streams</p>
           </div>
         </div>
       </div>
@@ -191,15 +289,36 @@
     <div class="modal-content admin-modal card">
       <div class="modal-header">
         <div class="admin-header-title">
-          <h3>🛠️ Admin Management Console</h3>
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            Admin Management Console
+          </h3>
           <p class="auth-subtitle">Manage users, passwords, and folder upload permissions</p>
         </div>
         <button class="modal-close" id="closeAdminModalBtn">&times;</button>
       </div>
 
       <div class="admin-tabs">
-        <button class="tab-btn active" id="tabUsersBtn">👥 Users & Permissions</button>
-        <button class="tab-btn" id="tabFoldersBtn">📁 Folder Management</button>
+        <button class="tab-btn active" id="tabUsersBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Users & Permissions
+        </button>
+        <button class="tab-btn" id="tabFoldersBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          System Folders
+        </button>
       </div>
 
       <!-- Tab 1: User Management -->
@@ -266,7 +385,7 @@
 
           <!-- Existing Folders List -->
           <div class="sub-card">
-            <h4>Current Folders</h4>
+            <h4>Current System Folders</h4>
             <div class="folders-list-container" id="adminFoldersList"></div>
           </div>
         </div>
@@ -278,9 +397,16 @@
   <div class="modal-overlay hidden" id="permissionModal">
     <div class="modal-content auth-modal card">
       <div class="modal-header">
-        <div>
-          <h3 id="permissionModalTitle">🔑 Edit Folder Permissions</h3>
-          <p class="auth-subtitle" id="permissionModalSubtitle">Grant or revoke access permissions</p>
+        <div class="auth-header-title">
+          <span class="auth-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+            </svg>
+          </span>
+          <div>
+            <h3 id="permissionModalTitle">Edit Folder Permissions</h3>
+            <p class="auth-subtitle" id="permissionModalSubtitle">Grant or revoke access permissions</p>
+          </div>
         </div>
         <button class="modal-close" id="closePermissionModalBtn">&times;</button>
       </div>
@@ -299,7 +425,12 @@
     <div class="modal-content auth-modal card">
       <div class="modal-header">
         <div class="auth-header-title">
-          <span class="auth-icon">🔒</span>
+          <span class="auth-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </span>
           <div>
             <h3 id="changePasswordModalTitle">Change Password</h3>
             <p class="auth-subtitle" id="changePasswordModalSubtitle">Please set a new password</p>
@@ -330,7 +461,11 @@
     <div class="modal-content auth-modal card">
       <div class="modal-header">
         <div class="auth-header-title">
-          <span class="auth-icon">🔑</span>
+          <span class="auth-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+            </svg>
+          </span>
           <div>
             <h3 id="adminResetPasswordTitle">Change User Password</h3>
             <p class="auth-subtitle" id="adminResetPasswordSubtitle">Set a new password for this user</p>
@@ -370,8 +505,13 @@
           Your browser does not support HTML5 video streaming.
         </video>
         <div class="stream-debugger card">
-          <h4>⚡ HTTP 206 Byte-Range Debugger</h4>
-          <p class="debug-text">Seeking in the video sends standard HTTP 206 Range headers, streaming exact byte chunks without buffering full video files over Cloudflare Tunnel.</p>
+          <h4>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            HTTP 206 Byte-Range Streaming Monitor
+          </h4>
+          <p class="debug-text">Seeking in the video sends standard HTTP 206 Range headers, streaming exact byte chunks on demand with zero full-file buffering.</p>
           <div class="range-log" id="rangeLog">Waiting for video stream events...</div>
         </div>
       </div>
